@@ -19,11 +19,8 @@ end
 
 on_worker_shutdown do
   puts ">> Worker shutting down (PID: #{Process.pid}) — simulating stuck cleanup"
-
-  # Simulate a real-world bug: blocking shutdown on resource cleanup
   puts ">> [FakeQueue] Waiting for job thread to finish (never does)"
-  
-  # Simulate background job running forever
+
   Thread.new do
     loop do
       puts ">> [FakeJob] Still running..."
@@ -31,11 +28,17 @@ on_worker_shutdown do
     end
   end
 
-  # BLOCK the shutdown directly — Puma won't exit until this ends
-  loop do
-    sleep 10
+  # Real CPU burn — replaces passive blocking
+  4.times do |i|
+    Thread.new do
+      puts ">> [FakeBurn #{i}] Burning CPU..."
+      loop { Math.sqrt(rand) * rand }
+    end
   end
+
+  sleep 999999  # Keep main thread alive too
 end
+
 
 at_exit do
   puts ">> Master at_exit triggered (PID #{Process.pid}) — simulating shutdown hang"
