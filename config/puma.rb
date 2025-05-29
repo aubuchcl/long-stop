@@ -1,21 +1,22 @@
+# Set up Puma in cluster mode
 workers 2
 threads 1, 1
 preload_app!
 
+# Ensure logs flush immediately
 $stdout.sync = true
 $stderr.sync = true
 
-
-# Simulate hanging background thread on shutdown
-at_exit do
-  puts ">> at_exit hook triggered - simulating long shutdown..."
-  Thread.new do
-    sleep 300 # Simulate a hung thread
-  end.join
-end
-
+# Called in each worker when it boots
 on_worker_boot do
   puts ">> Worker booted (PID: #{Process.pid})"
-  STDOUT.flush
 end
+
+# Called in each worker on shutdown – simulate a hang here
+on_worker_shutdown do
+  puts ">> Worker shutting down - simulating stuck cleanup (PID: #{Process.pid})"
+  sleep 300 # Simulate a long-running shutdown task
+  puts ">> Worker finished cleanup (PID: #{Process.pid})"
+end
+
 
