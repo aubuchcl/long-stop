@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# Trap termination signals (optional diagnostic)
+# Trap to show signal received in shell
 trap "echo 'SIGTERM caught in shell'" TERM
 
-# Start Puma in cluster mode
-exec bundle exec puma -C config/puma.rb
+# Start Puma with the rack app
+exec bundle exec puma -C config/puma.rb config.ru
