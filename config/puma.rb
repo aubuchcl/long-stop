@@ -47,4 +47,18 @@ on_worker_boot do
 end
 
 
+on_worker_shutdown do
+  puts ">> Worker shutting down (PID: #{Process.pid}) — simulating stuck cleanup"
+
+  Thread.new do
+    loop do
+      puts ">> [FakeJob] Still running... #{Time.now}"
+      sleep 5
+    end
+  end
+
+  loop { sleep 10 }  # <- This is what actually blocks shutdown
+end
+
+
 plugin :tmp_restart
