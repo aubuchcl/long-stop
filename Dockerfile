@@ -2,12 +2,11 @@ FROM ruby:3.2
 
 WORKDIR /app
 
-# Install dependencies
 COPY Gemfile ./
 RUN bundle install --full-index
 
-# Add app files
 COPY . .
-RUN chmod +x start.sh
-# Run Puma with our custom config
-CMD ["bash", "start.sh"]
+
+RUN mkdir -p tmp/pids
+
+CMD ["bash", "-c", "rm -f tmp/pids/server.pid && bundle exec puma -C config/puma.rb -b tcp://[::]:3000"]
