@@ -1,64 +1,57 @@
-max_threads_count = ENV.fetch("RAILS_MAX_THREADS", 5).to_i
-min_threads_count = ENV.fetch("RAILS_MIN_THREADS", max_threads_count).to_i
+# config/puma.rb
+
+require 'securerandom'
+require 'digest'
+
+max_threads_count = ENV.fetch("RAILS_MAX_THREADS") { 5 }
+min_threads_count = ENV.fetch("RAILS_MIN_THREADS") { max_threads_count }
 threads min_threads_count, max_threads_count
 
-worker_timeout 3600 if ENV.fetch("RAILS_ENV", "development") == "development"
-port ENV.fetch("PORT", 3000)
-environment ENV.fetch("RAILS_ENV", "development")
-workers ENV.fetch("WEB_CONCURRENCY", 2).to_i
+port ENV.fetch("PORT") { 3000 }
+environment ENV.fetch("RAILS_ENV") { "development" }
+worker_timeout 3600 if ENV.fetch("RAILS_ENV") == "development"
 
+workers ENV.fetch("WEB_CONCURRENCY") { 20 }
 preload_app!
+plugin :tmp_restart
 
 on_worker_boot do
-  puts ">> Worker booted (PID: #{Process.pid}) — simulating disk + moderate CPU usage"
+  puts ">> Worker #{Process.pid} booting — simulating startup load"
 
-  # Disk I/O
+  # Simulate disk write (~250MB per worker)
   Thread.new do
-    begin
-      dir = "/tmp/bloat_#{Process.pid}"
-      Dir.mkdir(dir) unless Dir.exist?(dir)
-
-      50.times do |i|
-        filename = File.join(dir, "filler_#{i}.dat")
-        puts ">> [DiskWriter] Writing #{filename}..."
-        File.open(filename, "wb") do |f|
-          f.write("0" * 100 * 1024 * 1024)  # 100MB
-        end
+    file_path = File.join("tmp", "worker-#{Process.pid}.dat")
+    File.open(file_path, "wb") do |f|
+      250.times do
+        f.write(Random.new.bytes(1_000_000)) # 1MB chunk
+        sleep 0.02
       end
-
-      puts ">> [DiskWriter] Done writing in PID #{Process.pid}"
-    rescue => e
-      puts ">> [DiskWriter] Error in PID #{Process.pid}: #{e.message}"
     end
+    puts ">> Disk write finished for worker #{Process.pid}"
   end
 
-  # Moderate-high CPU load via math + threads
-  2.times do |thread_id|
-    Thread.new do
-      puts ">> [CPU Worker #{thread_id}] PID #{Process.pid} starting elevated CPU work"
-      loop do
-        2_000_000.times do |i|
-          Math.sin(i) * Math.sqrt(i % 1000) * Math.tan(i % 360)
-        end
-        sleep 1
-      end
+  # Simulate moderate CPU pressure
+  Thread.new do
+    loop do
+      Digest::SHA256.hexdigest(SecureRandom.uuid)
+      sleep 0.005
     end
   end
 end
-
 
 on_worker_shutdown do
   puts ">> Worker shutting down (PID: #{Process.pid}) — simulating stuck cleanup"
 
+  # Fake hanging job thread
   Thread.new do
     loop do
-      puts ">> [FakeJob] Still running... #{Time.now}"
-      sleep 5
+      puts ">> [FakeJob] Still running..."
+      sleep 10
     end
   end
 
-  loop { sleep 10 }  # <- This is what actually blocks shutdown
+  # Hard block shutdown
+  loop do
+    sleep 10
+  end
 end
-
-
-plugin :tmp_restart
