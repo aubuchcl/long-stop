@@ -18,25 +18,23 @@ on_worker_boot do
 end
 
 on_worker_shutdown do
-  puts ">> Worker shutting down (PID: #{Process.pid}) — simulating background thread hang"
+  puts ">> Worker shutting down (PID: #{Process.pid}) — simulating stuck cleanup"
 
-  # Simulate a stuck background job
-  thread = Thread.new do
-    puts ">> [BackgroundJob] Simulating long-running job in shutdown"
+  # Simulate a real-world bug: blocking shutdown on resource cleanup
+  puts ">> [FakeQueue] Waiting for job thread to finish (never does)"
+  
+  # Simulate background job running forever
+  Thread.new do
     loop do
-      # Simulates a job loop or polling that never gets cancelled
+      puts ">> [FakeJob] Still running..."
       sleep 10
     end
   end
 
-  # Main shutdown thread waits for the background job
-  begin
-    thread.join
-  rescue => e
-    puts ">> Error joining thread: #{e.message}"
+  # BLOCK the shutdown directly — Puma won't exit until this ends
+  loop do
+    sleep 10
   end
-
-  puts ">> Worker finished shutdown (PID: #{Process.pid})"
 end
 
 
