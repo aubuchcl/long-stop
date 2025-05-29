@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install dependencies
 COPY Gemfile Gemfile.lock ./
-RUN bundle install
+RUN bundle install --full-index
 
 # Add app files
 COPY . .
