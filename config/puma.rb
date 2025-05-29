@@ -13,14 +13,29 @@ workers ENV.fetch("WEB_CONCURRENCY", 2).to_i
 preload_app!
 
 on_worker_boot do
-  puts ">> Worker booted (PID: #{Process.pid})"
+  puts ">> Worker booted (PID: #{Process.pid}) — simulating CPU load"
+
+  cpu_cores = ENV.fetch("CPU_HOG_PROCESSES", 4).to_i
+
+  cpu_cores.times do |i|
+    fork do
+      puts ">> [CPU Hog #{i}] Forked child pegging CPU on core #{i}"
+      loop { 1 + 1 } # Tight loop
+    end
+  end
+
+  Thread.new do
+    loop do
+      puts ">> [BackgroundJob] Running..."
+      sleep 5
+    end
+  end
 end
 
 on_worker_shutdown do
   puts ">> Worker shutting down (PID: #{Process.pid}) — simulating stuck cleanup"
   puts ">> [FakeQueue] Waiting for job thread to finish (never does)"
 
-  # Simulated never-ending background job
   Thread.new do
     loop do
       puts ">> [FakeJob] Still running..."
@@ -28,18 +43,7 @@ on_worker_shutdown do
     end
   end
 
-  # Peg real CPU cores using forked infinite loops (bypass Ruby's GIL)
-  cpu_cores = ENV.fetch("CPU_HOG_PROCESSES", 4).to_i
-
-  cpu_cores.times do |i|
-    fork do
-      puts ">> [CPU Hog #{i}] Forked child pegging CPU on core #{i}"
-      loop { 1 + 1 } # Tight loop, high CPU pressure
-    end
-  end
-
-  # Block shutdown forever
-  loop { sleep 10 }
+  loop { sleep 10 } # Block shutdown indefinitely
 end
 
 at_exit do
@@ -48,3 +52,4 @@ at_exit do
 end
 
 plugin :tmp_restart
+
