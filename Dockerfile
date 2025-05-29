@@ -1,8 +1,13 @@
-FROM alpine:latest
+FROM ruby:3.2
 
-RUN apk add --no-cache bash
+WORKDIR /app
 
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Install dependencies
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
 
-ENTRYPOINT ["/entrypoint.sh"]
+# Add app files
+COPY . .
+
+# Run Puma with our custom config
+CMD ["bash", "start.sh"]
