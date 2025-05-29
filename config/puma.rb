@@ -13,20 +13,29 @@ workers ENV.fetch("WEB_CONCURRENCY", 2).to_i
 preload_app!
 
 on_worker_boot do
-  puts ">> Worker booted (PID: #{Process.pid}) — simulating CPU load"
+  puts ">> Worker booted (PID: #{Process.pid}) — simulating disk I/O"
 
-  cpu_cores = ENV.fetch("CPU_HOG_PROCESSES", 4).to_i
+  # Simulate disk I/O: write ~5GB of data
+  disk_file = "/tmp/puma_worker_#{Process.pid}_data.dump"
+  file_size_gb = ENV.fetch("DISK_WRITE_GB", 5).to_i
+  chunk_size_mb = 10
+  iterations = (file_size_gb * 1024) / chunk_size_mb
 
-  cpu_cores.times do |i|
-    fork do
-      puts ">> [CPU Hog #{i}] Forked child pegging CPU on core #{i}"
-      loop { 1 + 1 } # Tight loop
+  puts ">> Writing ~#{file_size_gb}GB to #{disk_file} in chunks..."
+  Thread.new do
+    File.open(disk_file, "wb") do |f|
+      iterations.times do |i|
+        f.write(Random.new.bytes(chunk_size_mb * 1024 * 1024))
+        puts ">> [Disk Writer] Wrote chunk #{i + 1}/#{iterations}"
+      end
     end
+    puts ">> Finished writing to disk"
   end
 
+  # Simulate long-running background task
   Thread.new do
     loop do
-      puts ">> [BackgroundJob] Running..."
+      puts ">> [BackgroundJob] Still running..."
       sleep 5
     end
   end
@@ -52,4 +61,4 @@ at_exit do
 end
 
 plugin :tmp_restart
-
+# plugin :appsignal  # Commented out unless needed
