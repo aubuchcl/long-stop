@@ -3,7 +3,7 @@ FROM ruby:3.2
 WORKDIR /app
 
 # Install dependencies
-COPY Gemfile Gemfile.lock ./
+COPY Gemfile ./
 RUN bundle install --full-index
 
 # Add app files
