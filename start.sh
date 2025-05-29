@@ -5,4 +5,4 @@ set -e
 trap "echo 'SIGTERM caught in shell'" TERM
 
 # Start Puma with the rack app
-exec bundle exec puma -C config/puma.rb config.ru
+exec bundle exec puma -C config/puma.rb /app/config.ru
