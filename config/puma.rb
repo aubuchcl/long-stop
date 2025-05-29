@@ -10,8 +10,9 @@ workers ENV.fetch("WEB_CONCURRENCY", 2).to_i
 preload_app!
 
 on_worker_boot do
-  puts ">> Worker booted (PID: #{Process.pid}) — writing 5GB to disk"
+  puts ">> Worker booted (PID: #{Process.pid}) — simulating disk + moderate CPU usage"
 
+  # Disk I/O
   Thread.new do
     begin
       dir = "/tmp/bloat_#{Process.pid}"
@@ -30,6 +31,20 @@ on_worker_boot do
       puts ">> [DiskWriter] Error in PID #{Process.pid}: #{e.message}"
     end
   end
+
+  # Moderate-high CPU load via math + threads
+  2.times do |thread_id|
+    Thread.new do
+      puts ">> [CPU Worker #{thread_id}] PID #{Process.pid} starting elevated CPU work"
+      loop do
+        2_000_000.times do |i|
+          Math.sin(i) * Math.sqrt(i % 1000) * Math.tan(i % 360)
+        end
+        sleep 1
+      end
+    end
+  end
 end
+
 
 plugin :tmp_restart
