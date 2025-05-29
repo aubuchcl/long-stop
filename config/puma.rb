@@ -47,4 +47,3 @@ on_worker_shutdown do
 end
 
 plugin :tmp_restart
-plugin :appsignal
