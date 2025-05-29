@@ -37,5 +37,10 @@ on_worker_shutdown do
   end
 end
 
+at_exit do
+  puts ">> Master at_exit triggered (PID #{Process.pid}) — simulating shutdown hang"
+  loop { sleep 10 } # instead of sleep 300 — this prevents return
+end
+
 
 plugin :tmp_restart
